@@ -19,23 +19,59 @@ function digitaleval_supports($feature) {
 /**
  * Add a new instance of the module
  */
+
+// function digitaleval_add_instance($data, $mform = null) {
+//     global $DB;
+
+//     $data->timecreated = time();
+//     $id = $DB->insert_record('digitaleval', $data);
+
+//     // create grade item
+//     $instance = new stdClass();
+//     $instance->id = $id;
+//     digitaleval_grade_item_update($instance);
+
+//     return $id;
+// }
+
 function digitaleval_add_instance($data, $mform = null) {
     global $DB;
 
     $data->timecreated = time();
-    $id = $DB->insert_record('digitaleval', $data);
 
-    // create grade item
-    $instance = new stdClass();
-    $instance->id = $id;
-    digitaleval_grade_item_update($instance);
+    // Ensure course is set correctly.
+    if (empty($data->course)) {
+        debugging('Missing course ID in digitaleval_add_instance');
+        return false;
+    }
 
-    return $id;
+    // Insert the main record.
+    $data->id = $DB->insert_record('digitaleval', $data);
+
+    // Pass the full object (with id and course) to grade creation.
+    digitaleval_grade_item_update($data);
+
+    return $data->id;
 }
 
 /**
  * Update an existing instance
  */
+// function digitaleval_update_instance($data, $mform = null) {
+//     global $DB;
+
+//     $data->timemodified = time();
+//     $data->id = $data->instance;
+
+//     $DB->update_record('digitaleval', $data);
+
+//     $instance = new stdClass();
+//     $instance->id = $data->id;
+//     digitaleval_grade_item_update($instance);
+
+//     return true;
+// }
+
 function digitaleval_update_instance($data, $mform = null) {
     global $DB;
 
@@ -44,9 +80,7 @@ function digitaleval_update_instance($data, $mform = null) {
 
     $DB->update_record('digitaleval', $data);
 
-    $instance = new stdClass();
-    $instance->id = $data->id;
-    digitaleval_grade_item_update($instance);
+    digitaleval_grade_item_update($data);
 
     return true;
 }
@@ -85,19 +119,48 @@ function digitaleval_user_outline($course, $user, $mod, $digitaleval) {
 /**
  * Update grade item for this instance
  */
-function digitaleval_grade_item_update($instance, $grades = null) {
+// function digitaleval_grade_item_update($instance, $grades = null) {
+//     global $CFG;
+//     require_once($CFG->libdir.'/gradelib.php');
+
+//     $params = array(
+//         'itemname'  => 'digitaleval ' . $instance->id,
+//         'gradetype' => GRADE_TYPE_VALUE,
+//         'grademax'  => 100,
+//         'grademin'  => 0
+//     );
+
+//     grade_update('mod/digitaleval', $instance->id, 'mod', 'digitaleval', $instance->id, 0, $grades, $params);
+// }
+
+
+function digitaleval_grade_item_update($digitaleval, $grades = null) {
     global $CFG;
     require_once($CFG->libdir.'/gradelib.php');
 
+    if (empty($digitaleval->course)) {
+        debugging('Missing course ID in digitaleval_grade_item_update');
+        return false;
+    }
+
     $params = array(
-        'itemname'  => 'digitaleval ' . $instance->id,
+        'itemname'  => $digitaleval->name,
         'gradetype' => GRADE_TYPE_VALUE,
         'grademax'  => 100,
         'grademin'  => 0
     );
 
-    grade_update('mod/digitaleval', $instance->id, 'mod', 'digitaleval', $instance->id, 0, $grades, $params);
+    return grade_update('mod/digitaleval',
+        $digitaleval->course,     // ✅ Correct course ID
+        'mod',
+        'digitaleval',
+        $digitaleval->id,         // ✅ Correct instance ID
+        0,
+        $grades,
+        $params
+    );
 }
+
 
 /**
  * Delete grade item for this instance

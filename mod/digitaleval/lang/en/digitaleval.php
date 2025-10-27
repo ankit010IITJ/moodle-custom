@@ -24,4 +24,20 @@ $string['downloadall'] = 'Download all submissions';
 $string['grade'] = 'Grade';
 $string['notgraded'] = 'Not graded yet';
 
+$string['gradingstudent'] = 'Grading student';
+$string['files'] = 'Submitted files';
+$string['feedback'] = 'Feedback';
+$string['savechanges'] = 'Save changes';
+$string['backtooverview'] = 'Back to overview';
+
+
+$string['nofiles'] = 'No files submitted';
+$string['downloadfile'] = 'Download file';
+$string['filecannotpreview'] = 'This file type cannot be previewed inline.';
+$string['gradesaved'] = 'Grade saved successfully';
+$string['couldnotsave'] = 'Could not save submission';
+$string['prev'] = 'Previous';
+$string['next'] = 'Next';
+
+
 ?>
