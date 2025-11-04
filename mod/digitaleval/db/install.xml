@@ -41,6 +41,7 @@
         <FIELD NAME="grader" TYPE="int" LENGTH="10" NOTNULL="false"/>
         <FIELD NAME="graded" TYPE="int" LENGTH="10" NOTNULL="false"/>
         <FIELD NAME="feedback" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="ocrstatus" TYPE="varchar" LENGTH="20" NOTNULL="false" />
       </FIELDS>
 
       <KEYS>

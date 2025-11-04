@@ -24,19 +24,10 @@ if ($id) {
 require_login($course, true, $cm);
 $context = context_module::instance($cm->id);
 
-if (!has_capability('mod/digitaleval:grade', $context)) {
-    print_error('nopermissiontograde', 'mod_digitaleval');
-}
-
-$PAGE->set_url('/mod/digitaleval/grade.php', ['id' => $cm->id, 'submissionid' => $submissionid]);
-$PAGE->set_title(get_string('gradeforstudent', 'mod_digitaleval', ''));
-$PAGE->set_heading(format_string($course->fullname));
-
-echo $OUTPUT->header();
-
 // Fetch all submissions for this activity
 $subs = $DB->get_records('digitaleval_submissions', ['digitalevalid' => $digitaleval->id], 'id ASC');
 if (empty($subs)) {
+    echo $OUTPUT->header();
     echo $OUTPUT->notification(get_string('notsubmitted', 'mod_digitaleval'), 'notifywarning');
     echo $OUTPUT->footer();
     exit;
@@ -60,7 +51,7 @@ $curid = $ordered[$curindex];
 $submission = $DB->get_record('digitaleval_submissions', ['id' => $curid], '*', MUST_EXIST);
 $student = $DB->get_record('user', ['id' => $submission->userid], '*', MUST_EXIST);
 
-// Handle POST save actions
+// ✅ Handle POST save actions early (before any output)
 if (data_submitted() && confirm_sesskey()) {
     $posted_grade = optional_param('grade', null, PARAM_RAW);
     $posted_feedback = optional_param('feedback', null, PARAM_TEXT);
@@ -75,20 +66,60 @@ if (data_submitted() && confirm_sesskey()) {
 
     try {
         $DB->update_record('digitaleval_submissions', $submission);
+        // Refresh submission to reflect latest grade and feedback
+        // $submission = $DB->get_record('digitaleval_submissions', ['id' => $submission->id], '*', MUST_EXIST);
+
+        $submission = $DB->get_record('digitaleval_submissions', ['id' => $curid], '*', MUST_EXIST);
+
+        // Force Moodle to recognize old grades (don’t treat null as 0)
+        if ($submission->grade === null) {
+            $submission->grade = '';
+        }
+
+
+        // Prepare grade data and include course ID
+        // $grades = [];
+        // $grades[$submission->userid] = (object)[
+        //     'userid' => $submission->userid,
+        //     'rawgrade' => $gradeval
+        // ];
+
+        // $gradeitem = (object)[
+        //     'id' => $digitaleval->id,
+        //     'course' => $course->id
+        // ];
+
         $grades = [];
         $grades[$submission->userid] = (object)[
             'userid' => $submission->userid,
             'rawgrade' => $gradeval
         ];
-        digitaleval_grade_item_update((object)['id' => $digitaleval->id], $grades);
-        \core\notification::success(get_string('gradesaved', 'mod_digitaleval'));
+
+        $gradeitem = (object)[
+            'id' => $digitaleval->id,
+            'course' => $course->id,
+            'name' => $digitaleval->name
+        ];
+
+        digitaleval_grade_item_update($gradeitem, $grades);
+
     } catch (dml_exception $e) {
-        \core\notification::warning(get_string('couldnotsave', 'mod_digitaleval') . ' - ' . s($e->getMessage()));
+        redirect(
+            new moodle_url('/mod/digitaleval/grade.php', ['id' => $cm->id, 'submissionid' => $submission->id]),
+            get_string('couldnotsave', 'mod_digitaleval') . ' - ' . s($e->getMessage()),
+            null,
+            \core\output\notification::NOTIFY_ERROR
+        );
     }
 
-    // Redirect logic
+    // ✅ Redirect logic before any output
     if ($action === 'savenext' && $curindex + 1 < count($ordered)) {
-        redirect(new moodle_url('/mod/digitaleval/grade.php', ['id' => $cm->id, 'submissionid' => $ordered[$curindex + 1]]));
+        redirect(
+            new moodle_url('/mod/digitaleval/grade.php', ['id' => $cm->id, 'submissionid' => $ordered[$curindex + 1]]),
+            get_string('gradesaved', 'mod_digitaleval'),
+            1,
+            \core\output\notification::NOTIFY_SUCCESS
+        );
     } else if ($action === 'next' && $curindex + 1 < count($ordered)) {
         redirect(new moodle_url('/mod/digitaleval/grade.php', ['id' => $cm->id, 'submissionid' => $ordered[$curindex + 1]]));
     } else if ($action === 'prev' && $curindex - 1 >= 0) {
@@ -98,9 +129,20 @@ if (data_submitted() && confirm_sesskey()) {
     } else {
         redirect(new moodle_url('/mod/digitaleval/grade.php', ['id' => $cm->id, 'submissionid' => $curid]));
     }
+
+    exit; // stop further page output after redirect
 }
 
-// Display header info
+// ✅ Now start page output (after redirects handled)
+
+debugging('Current grade loaded: ' . var_export($submission->grade, true), DEBUG_DEVELOPER);
+
+$PAGE->set_url('/mod/digitaleval/grade.php', ['id' => $cm->id, 'submissionid' => $submissionid]);
+$PAGE->set_title(get_string('gradeforstudent', 'mod_digitaleval', ''));
+$PAGE->set_heading(format_string($course->fullname));
+
+echo $OUTPUT->header();
+
 echo $OUTPUT->heading(get_string('gradingstudent', 'mod_digitaleval') . ': ' . fullname($student));
 
 // Show submitted files
@@ -164,8 +206,17 @@ if (empty($files)) {
 }
 
 // Grading form
-$gradeval = isset($submission->grade) ? $submission->grade : '';
+// $gradeval = isset($submission->grade) ? $submission->grade : '';
+// $gradeval = ($submission->grade !== null && $submission->grade !== '') ? s($submission->grade) : '';
+
+$gradeval = ($submission->grade !== null) ? s($submission->grade) : '';
+
 $feedbackval = isset($submission->feedback) ? $submission->feedback : '';
+
+// Optional message
+if (!empty($submission->graded)) {
+    echo $OUTPUT->notification('This submission was graded on ' . userdate($submission->graded) . '. You can modify the grade below.', 'info');
+}
 
 echo html_writer::start_tag('form', ['method' => 'post']);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);

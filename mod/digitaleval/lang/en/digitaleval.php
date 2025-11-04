@@ -39,5 +39,8 @@ $string['couldnotsave'] = 'Could not save submission';
 $string['prev'] = 'Previous';
 $string['next'] = 'Next';
 
+$string['questionfile'] = 'Question Paper (PDF)';
+$string['questionfile_help'] = 'Upload the question paper that will be used for evaluating student submissions.';
+$string['downloadquestion'] = 'Download question paper';
 
 ?>
