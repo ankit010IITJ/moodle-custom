@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<XMLDB PATH="mod/digitaleval/db" VERSION="2025102200" COMMENT="Database for digitaleval">
+<XMLDB PATH="mod/digitaleval/db" VERSION="2025102600" COMMENT="Database for digitaleval activity module">
   <TABLES>
 
-    <TABLE NAME="digitaleval" COMMENT="stores activity settings">
+    <!-- Main table for module instances -->
+    <TABLE NAME="digitaleval" COMMENT="Stores configuration and settings for each digitaleval activity instance">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="course" TYPE="int" LENGTH="10" NOTNULL="true"/>
@@ -12,14 +13,23 @@
         <FIELD NAME="timedue" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0"/>
         <FIELD NAME="maxfiles" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="1"/>
         <FIELD NAME="maxbytes" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="1048576"/>
-        <FIELD NAME="grade" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="100"/>
+        <FIELD NAME="grade" TYPE="float" LENGTH="10" NOTNULL="true" DEFAULT="100"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
       </FIELDS>
+
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="course_fk" TYPE="foreign" FIELDS="course" REFTABLE="course" REFFIELDS="id"/>
       </KEYS>
+
+      <INDEXES>
+        <INDEX NAME="courseindex" UNIQUE="false" FIELDS="course"/>
+      </INDEXES>
     </TABLE>
 
-    <TABLE NAME="digitaleval_submissions" COMMENT="student submissions">
+    <!-- Table for student submissions -->
+    <TABLE NAME="digitaleval_submissions" COMMENT="Stores individual student submissions for digitaleval">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="digitalevalid" TYPE="int" LENGTH="10" NOTNULL="true"/>
@@ -31,10 +41,19 @@
         <FIELD NAME="grader" TYPE="int" LENGTH="10" NOTNULL="false"/>
         <FIELD NAME="graded" TYPE="int" LENGTH="10" NOTNULL="false"/>
         <FIELD NAME="feedback" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="ocrstatus" TYPE="varchar" LENGTH="20" NOTNULL="false" />
       </FIELDS>
+
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="digitalevalid_fk" TYPE="foreign" FIELDS="digitalevalid" REFTABLE="digitaleval" REFFIELDS="id"/>
+        <KEY NAME="userid_fk" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
       </KEYS>
+
+      <INDEXES>
+        <INDEX NAME="digitalevalidindex" UNIQUE="false" FIELDS="digitalevalid"/>
+        <INDEX NAME="useridindex" UNIQUE="false" FIELDS="userid"/>
+      </INDEXES>
     </TABLE>
 
   </TABLES>
